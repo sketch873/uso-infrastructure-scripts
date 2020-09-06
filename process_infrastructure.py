@@ -27,13 +27,19 @@ class Person:
                     return lab
 
 
+# Hardcoded variables. Adjust accordingly to your file format
 NAME = "Nume"
 ABREV = "Abreviere"
 EMAIL = "E-mail"
 HEADER_START = 'Luni'
 TABLE_WIDTH = 6
 TABLE_HEIGHT = 7
+TEACHERS_NUMBER = 4
 ROOMS = ['EG306', 'EG106']
+
+
+def strip_fun(x):
+    return x.strip()
 
 
 def get_team_info(team_table):
@@ -45,14 +51,24 @@ def get_team_info(team_table):
 
     members = {}
     abrev_map = {}
+    teachers = []
 
     team_csv = open(team_table)
-    reader = csv.DictReader(team_csv)
+    # Eliminate the whitespaces in the columns name
+    header = list(map(strip_fun, team_csv.readline().split(',')))
 
+    reader = csv.DictReader(team_csv, fieldnames=header)
     for row in reader:
+        # Eliminate the whitespaces
+        for k, v in row.items():
+            row[k] = v.strip()
+
         if row[NAME] in members:
             print(row[NAME] + " has multiple entries in table")
             continue
+
+        if len(teachers) < TEACHERS_NUMBER:
+            teachers.append(row[NAME])
 
         members[row[NAME]] = Person(row[NAME], row[EMAIL])
 
@@ -65,7 +81,7 @@ def get_team_info(team_table):
             abrev_map[row[ABREV]] += ' | ' + row[NAME]
 
     team_csv.close()
-    return members, abrev_map
+    return members, abrev_map, teachers
 
 
 def skip_to_table(csv_reader, word):
@@ -90,7 +106,11 @@ def get_table(csv_reader, start_index, header):
     # Select the rest of the rows of the table
     for row in csv_reader:
         if height < TABLE_HEIGHT:
-            table.append(row[start_index:end_index])
+            new_row = []
+            # Delete the whitespaces in every cell
+            for index in range(start_index, end_index):
+                new_row.append(row[index].strip())
+            table.append(new_row)
             height += 1
         else:
             break
@@ -153,7 +173,7 @@ def add_groups(series, members, table, room):
             if not group == '':
                 name = add_group_to_lab(members, day, hour, group, room)
                 if name is not None:
-                    # Hardcoded indexes for ???<group>* format
+                    # Hardcoded indexes for ???<series>* format. Adjust accordingly to your file format
                     series[group[3:5]].append((group, name))
                 else:
                     print("The {}-{}:{} lab doesn't have a person associated".format(day, hour, group))
@@ -167,7 +187,7 @@ def process_schedule(schedule_file, members, rooms):
 
     csv_file = open(schedule_file)
     reader = csv.reader(csv_file)
-    # Manually added series
+    # Manually added series. Adjust accordingly to your file forma
     series = {'AC': [], 'CA': [], 'CB': [], 'CC': [], 'CD': []}
     for room in rooms:
         index, header = skip_to_table(reader, HEADER_START)
@@ -185,7 +205,7 @@ def process_allocation(allocation_file, members, rooms, abrev_map):
 
     csv_file = open(allocation_file)
     reader = csv.reader(csv_file)
-    writer = open('ALOCARE_FINALA.csv', 'w')
+    writer = open('alocare_finala.csv', 'w')
     # Skip the first table
     skip_to_table(reader, HEADER_START)
     for room in rooms:
@@ -220,23 +240,12 @@ def sort_members(person):
     return person.name
 
 
-def sample_mail_list(members, teachers_file):
-    # Teachers shouldn't appear in the mailing list
-    if teachers_file is not None and os.path.isfile(teachers_file):
-        _file = open(teachers_file)
-        reader = csv.DictReader(_file)
-        for row in reader:
-            if row[NAME] == '':
-                break
-            # Convert the last name to upper case
-            name = row[NAME].split(' ')
-            name[-1] = name[-1].upper()
-            name = ' '.join(name)
-            if name in members:
-                del members[name]
-        _file.close()
-
+def sample_mail_list(members, teachers_list):
     writer = open('mail_list', 'w')
+    # Teachers shouldn't appear in the mailing list
+    for teacher in teachers_list:
+        del members[teacher]
+
     _list = list(members.values())
     _list.sort(key=sort_members)
     writer.write('==== Asistenti ====\n')
@@ -250,17 +259,13 @@ def sample_mail_list(members, teachers_file):
     writer.close()
 
 
-if len(sys.argv) < 4:
-    print("Usage: " + sys.argv[0] + " TEAM_CSV ALOCARE_CSV ORAR_CSV [TEAM_PUBLIC_CSV]")
+if len(sys.argv) != 4:
+    print("Usage: " + sys.argv[0] + " TEAM_CSV ALOCARE_CSV ORAR_CSV")
     sys.exit(1)
 
-members, mapping_table = get_team_info(sys.argv[1])
+members, mapping_table, teachers = get_team_info(sys.argv[1])
 process_allocation(sys.argv[2], members, ROOMS, mapping_table)
 series = process_schedule(sys.argv[3], members, ROOMS)
 
 sample_ocw_schedule(members, series)
-
-if len(sys.argv) == 5:
-    sample_mail_list(members, sys.argv[4])
-else:
-    sample_mail_list(members, None)
+sample_mail_list(members, teachers)
