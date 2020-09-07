@@ -4,6 +4,15 @@ import sys
 import os
 import csv
 
+# Hardcoded variables. Adjust accordingly to your file format
+NAME = "Nume"
+ABREV = "Abreviere"
+EMAIL = "E-mail"
+HEADER_START = 'Luni'
+TABLE_WIDTH = 6
+TABLE_HEIGHT = 7
+TEACHERS_NUMBER = 4
+ROOMS = ['EG306', 'EG106']
 
 class Lab:
     def __init__(self):
@@ -25,17 +34,6 @@ class Person:
             for lab in lab_list:
                 if lab.group == group:
                     return lab
-
-
-# Hardcoded variables. Adjust accordingly to your file format
-NAME = "Nume"
-ABREV = "Abreviere"
-EMAIL = "E-mail"
-HEADER_START = 'Luni'
-TABLE_WIDTH = 6
-TABLE_HEIGHT = 7
-TEACHERS_NUMBER = 4
-ROOMS = ['EG306', 'EG106']
 
 
 def strip_fun(x):
